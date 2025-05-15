@@ -1,0 +1,123 @@
+```
+# secure-apache-webserver/README.md
+# Secure Apache Web Server on Ubuntu 20.04
+
+This repository documents a project to deploy a secure Apache web server on Ubuntu 20.04, implementing Let’s Encrypt SSL, iptables firewall, and uptime monitoring to achieve 99.9% uptime. The project showcases Linux system administration skills, including server setup, security configuration, automation, and monitoring.
+
+## Project Overview
+- **Objective**: Deploy a secure Apache web server hosting a sample website, secured with Let’s Encrypt SSL and iptables firewall, with automated backups and uptime monitoring.
+- **Technologies Used**: Ubuntu 20.04, Apache2, Let’s Encrypt (Certbot), iptables, Bash, cron.
+- **Key Achievements**:
+  - Configured Apache to serve a sample website with 99.9% uptime.
+  - Secured the server with Let’s Encrypt SSL and a robust iptables firewall.
+  - Automated backups of web content using Bash scripts and cron.
+  - Implemented basic uptime monitoring with email alerts.
+
+## Repository Structure
+- `scripts/`: Bash scripts for setup, SSL, firewall, monitoring, and backups.
+- `configs/`: Sample Apache and iptables configuration files.
+- `docs/`: Detailed setup guide and screenshots of SSL tests and uptime logs.
+
+## Setup Instructions
+1. Clone the repository: `git clone https://github.com/yourusername/secure-apache-webserver.git`
+2. Follow the detailed setup guide in `docs/setup-guide.md`.
+3. Run scripts in the following order:
+   - `scripts/setup-apache.sh` to install and configure Apache.
+   - `scripts/setup-ssl.sh` to install and configure Let’s Encrypt SSL.
+   - `scripts/setup-firewall.sh` to configure iptables.
+   - `scripts/backup.sh` to set up automated backups.
+   - `scripts/monitor-uptime.sh` to monitor server uptime.
+
+## Prerequisites
+- Ubuntu 20.04 server (VM or cloud instance).
+- Root or sudo access.
+- Domain name for SSL (optional for testing; use a subdomain or local setup).
+
+## License
+This project is licensed under the MIT License - see the `LICENSE` file for details.
+
+---
+
+# secure-apache-webserver/LICENSE
+MIT License
+
+Copyright (c) 2025 [Your Name]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+# secure-apache-webserver/scripts/setup-apache.sh
+#!/bin/bash
+# Script to install and configure Apache on Ubuntu 20.04
+
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Apache
+sudo apt install apache2 -y
+
+# Enable and start Apache
+sudo systemctl enable apache2
+sudo systemctl start apache2
+
+# Create a sample website
+sudo mkdir -p /var/www/example.com/html
+sudo chown -R $USER:$USER /var/www/example.com/html
+sudo chmod -R 755 /var/www/example.com
+echo "<html><h1>Welcome to Example.com</h1></html>" > /var/www/example.com/html/index.html
+
+# Configure Apache virtual host
+sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/example.com.conf
+sudo sed -i 's|/var/www/html|/var/www/example.com/html|' /etc/apache2/sites-available/example.com.conf
+sudo sed -i 's|ServerName www.example.com|ServerName example.com|' /etc/apache2/sites-available/example.com.conf
+sudo a2ensite example.com.conf
+sudo systemctl reload apache2
+
+echo "Apache setup complete. Access at http://your-server-ip"
+
+---
+
+# secure-apache-webserver/scripts/setup-ssl.sh
+#!/bin/bash
+# Script to configure Let’s Encrypt SSL for Apache
+
+# Install Certbot
+sudo apt install certbot python3-certbot-apache -y
+
+# Obtain and install SSL certificate (replace example.com with your domain)
+sudo certbot --apache -d example.com -d www.example.com --non-interactive --agree-tos -m admin@example.com
+
+# Set up auto-renewal
+echo "0 3 * * * root certbot renew --quiet" | sudo tee -a /etc/crontab
+
+echo "SSL setup complete. Access at https://example.com"
+
+---
+
+# secure-apache-webserver/scripts/setup-firewall.sh
+#!/bin/bash
+# Script to configure iptables firewall
+
+# Flush existing rules
+sudo iptables -F
+
+# Allow SSH, HTTP, HTTPS
+sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 80
